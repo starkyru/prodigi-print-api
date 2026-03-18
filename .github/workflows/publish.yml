@@ -1,0 +1,51 @@
+name: Publish
+
+on:
+  push:
+    branches: [main, test]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Bump minor version
+      - name: Bump version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version minor --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ github.ref_name }}" = "test" ]; then
+            npm version "${VERSION}-test" --no-git-tag-version
+          fi
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          git commit -m "v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin ${{ github.ref_name }} --tags
+
+      # Publish
+      - name: Publish to npm
+        run: |
+          if [ "${{ github.ref_name }}" = "test" ]; then
+            npm publish --tag test
+          else
+            npm publish
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

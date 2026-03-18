@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,13 +40,11 @@ jobs:
           git tag "v${NEW_VERSION}"
           git push origin ${{ github.ref_name }} --tags
 
-      # Publish
+      # Publish with provenance (trusted publishing via OIDC)
       - name: Publish to npm
         run: |
           if [ "${{ github.ref_name }}" = "test" ]; then
-            npm publish --tag test
+            npm publish --provenance --access public --tag test
           else
-            npm publish
+            npm publish --provenance --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

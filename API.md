@@ -10,12 +10,14 @@ Full reference for all classes, methods, and types exported by `prodigi-print-ap
   - [Orders](#orders)
   - [Quotes](#quotes)
   - [Products](#products)
+  - [Catalogue](#catalogue)
 - [Error Handling](#error-handling)
 - [Types](#types)
   - [Common](#common)
   - [Orders](#order-types)
   - [Quotes](#quote-types)
   - [Products](#product-types)
+  - [Catalogue](#catalogue-types)
   - [Actions](#action-types)
   - [Callbacks](#callback-types)
 
@@ -52,11 +54,12 @@ interface ProdigiClientOptions {
 
 ### Properties
 
-| Property   | Type               | Description          |
-| ---------- | ------------------ | -------------------- |
-| `orders`   | `OrdersResource`   | Orders API methods   |
-| `quotes`   | `QuotesResource`   | Quotes API methods   |
-| `products` | `ProductsResource` | Products API methods |
+| Property    | Type                | Description                             |
+| ----------- | ------------------- | --------------------------------------- |
+| `orders`    | `OrdersResource`    | Orders API methods                      |
+| `quotes`    | `QuotesResource`    | Quotes API methods                      |
+| `products`  | `ProductsResource`  | Products API methods                    |
+| `catalogue` | `CatalogueResource` | Public catalogue API (no auth required) |
 
 ---
 
@@ -180,6 +183,23 @@ Get spine width information for book products.
 
 - **Parameters:** `request: SpineRequest`
 - **Returns:** `Promise<SpineResponse>`
+
+### Catalogue
+
+The catalogue resource uses Prodigi's public product API (`https://product-api-app-live.azurewebsites.net/api`) and requires no authentication.
+
+#### `client.catalogue.list()`
+
+List all categories and products in the catalogue.
+
+- **Returns:** `Promise<CatalogueListResponse>` (`Record<string, CatalogueCategory>`)
+
+#### `client.catalogue.get(slug)`
+
+Get detailed product information including all SKU variants, sizes, asset dimensions, and pricing.
+
+- **Parameters:** `slug: string` — product slug (e.g. `"cold-press-watercolour-paper"`)
+- **Returns:** `Promise<CatalogueProductDetail>`
 
 ---
 
@@ -568,6 +588,94 @@ interface SpineResponse {
   spineInfo: {
     widthMm: number;
   };
+}
+```
+
+### Catalogue Types
+
+```ts
+interface CataloguePricing {
+  source: string;
+  value: string;
+}
+
+interface CatalogueProductSummary {
+  name: string;
+  slug: string;
+  productSlug: string;
+  global: boolean;
+  sizes: string[];
+  pricing: CataloguePricing[];
+  manufacturingRegions: string[];
+  image: string;
+  imageRequired: boolean;
+  loreSlug?: string;
+}
+
+interface CatalogueCategory {
+  name: string;
+  slug: string;
+  fullSlug?: string;
+  images?: string[];
+  products: Record<string, CatalogueProductSummary>;
+  subCategories: Record<string, CatalogueCategory>;
+}
+
+type CatalogueListResponse = Record<string, CatalogueCategory>;
+
+interface CatalogueVariantAsset {
+  name: string;
+  required: boolean;
+  horizontalInches: number;
+  verticalInches: number;
+  sizeUnits: string;
+  outputDpi: number;
+  fileOutputFormat: string;
+}
+
+interface CatalogueVariantAttribute {
+  value: string[];
+}
+
+interface CatalogueVariantRow {
+  sku: string;
+  description: string;
+  attributeDescription: string;
+  productType: string;
+  price: string;
+  assets: CatalogueVariantAsset[];
+  size?: string;
+  orientation?: string;
+  fulfilledFrom?: string;
+}
+
+interface CatalogueVariantColumn {
+  enableSorting: boolean;
+  name: string;
+  filterType: string;
+  options?: string[];
+}
+
+interface CatalogueVariants {
+  columns: Record<string, CatalogueVariantColumn>;
+  rows: CatalogueVariantRow[];
+}
+
+interface CatalogueManufacturing {
+  regions: string[];
+  time: string;
+  shipsTo: string[];
+}
+
+interface CatalogueProductDetail {
+  name: string;
+  availability: string;
+  description: string[];
+  features: string[];
+  manufacturing: CatalogueManufacturing;
+  pricing: CataloguePricing[];
+  variants: CatalogueVariants;
+  sizes: string[];
 }
 ```
 

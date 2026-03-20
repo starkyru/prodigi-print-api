@@ -216,6 +216,31 @@ const methods: MethodDef[] = [
     execute: (client, values) =>
       client.products.getSpine(JSON.parse(values.request)),
   },
+
+  // ── Catalogue ─────────────────────────────────────────
+  {
+    id: "catalogue.list",
+    resource: "Catalogue",
+    description: "List all categories and products in the public catalogue.",
+    params: [],
+    execute: (client) => client.catalogue.list(),
+  },
+  {
+    id: "catalogue.get",
+    resource: "Catalogue",
+    description:
+      "Get detailed product info including SKU variants, sizes, and pricing.",
+    params: [
+      {
+        name: "slug",
+        label: "Product slug",
+        kind: "string",
+        required: true,
+        defaultValue: "cold-press-watercolour-paper",
+      },
+    ],
+    execute: (client, values) => client.catalogue.get(values.slug),
+  },
 ];
 
 export default methods;

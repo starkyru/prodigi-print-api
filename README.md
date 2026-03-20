@@ -78,6 +78,15 @@ client.products.get(sku: string): Promise<ProductOutcome>
 client.products.getSpine(request: SpineRequest): Promise<SpineResponse>
 ```
 
+### Catalogue
+
+Browse the public product catalogue (no API key required):
+
+```ts
+client.catalogue.list(): Promise<CatalogueListResponse>
+client.catalogue.get(slug: string): Promise<CatalogueProductDetail>
+```
+
 ## OrderBuilder
 
 Fluent builder for constructing `CreateOrderRequest` objects:
@@ -150,6 +159,14 @@ import type {
   ProductOutcome,
   SpineRequest,
   SpineResponse,
+
+  // Catalogue
+  CatalogueListResponse,
+  CatalogueCategory,
+  CatalogueProductSummary,
+  CatalogueProductDetail,
+  CatalogueVariantRow,
+  CatalogueVariantAsset,
 
   // Client
   ProdigiClientOptions,

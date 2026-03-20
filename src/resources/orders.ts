@@ -74,7 +74,7 @@ export class OrdersResource {
   ): Promise<RecipientActionOutcome> {
     return this.http.post<RecipientActionOutcome>(
       `/orders/${orderId}/actions/updateRecipient`,
-      request,
+      request.recipient,
     );
   }
 

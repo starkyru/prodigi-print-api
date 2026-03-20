@@ -2,13 +2,13 @@ import { ProdigiApiError } from "./errors.js";
 
 export interface HttpClientOptions {
   baseUrl: string;
-  apiKey: string;
+  apiKey?: string;
 }
 
 /** Low-level HTTP client for making authenticated requests to the Prodigi API. */
 export class HttpClient {
   readonly baseUrl: string;
-  private readonly apiKey: string;
+  private readonly apiKey: string | undefined;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl;
@@ -60,9 +60,12 @@ export class HttpClient {
 
   private async request<T>(url: string, init: RequestInit): Promise<T> {
     const headers: Record<string, string> = {
-      "X-API-Key": this.apiKey,
       "Content-Type": "application/json",
     };
+
+    if (this.apiKey) {
+      headers["X-API-Key"] = this.apiKey;
+    }
 
     const response = await globalThis.fetch(url, {
       ...init,

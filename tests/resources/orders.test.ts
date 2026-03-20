@@ -115,7 +115,7 @@ describe("OrdersResource", () => {
     const calledUrl = mockFetch.mock.calls[0][0] as string;
     expect(calledUrl).toContain("/orders/ord_123/actions/updateRecipient");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.recipient.name).toBe("John");
+    expect(body.name).toBe("John");
   });
 
   it("updateMetadata sends POST with body", async () => {

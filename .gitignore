@@ -4,3 +4,5 @@ dist/
 .DS_Store
 prodigi-print-api-*
 .npmrc
+.env
+.env.local

@@ -15,6 +15,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/production/, ""),
       },
+      "/api/catalogue-proxy": {
+        target: "https://product-api-app-live.azurewebsites.net/api",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/catalogue-proxy/, ""),
+      },
     },
   },
 });

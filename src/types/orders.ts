@@ -1,7 +1,6 @@
 import type {
   Cost,
   OrderStage,
-  OrderStatus,
   Recipient,
   ShippingMethod,
   Sizing,
@@ -12,11 +11,32 @@ export interface Asset {
   url: string;
   md5Hash?: string;
   thumbnailUrl?: string;
+  pageCount?: number;
 }
 
 export interface OrderItemAttribute {
   name: string;
   value: string;
+}
+
+export interface BrandingAsset {
+  url: string;
+}
+
+export interface Branding {
+  postcard?: BrandingAsset;
+  flyer?: BrandingAsset;
+  packing_slip_bw?: BrandingAsset;
+  packing_slip_color?: BrandingAsset;
+  sticker_exterior_round?: BrandingAsset;
+  sticker_exterior_rectangle?: BrandingAsset;
+  sticker_interior_round?: BrandingAsset;
+  sticker_interior_rectangle?: BrandingAsset;
+}
+
+export interface PackingSlip {
+  url: string;
+  status: string;
 }
 
 export interface CreateOrderItem {
@@ -36,10 +56,12 @@ export interface CreateOrderRequest {
   items: CreateOrderItem[];
   metadata?: Record<string, string>;
   idempotencyKey?: string;
+  callbackUrl?: string;
+  branding?: Branding;
 }
 
 export interface StatusChange {
-  status: OrderStatus;
+  status: string;
   timestamp: string;
 }
 
@@ -50,7 +72,7 @@ export interface FulfilmentLocation {
 
 export interface OrderItem {
   id: string;
-  status: OrderStatus;
+  status: string;
   merchantReference?: string;
   sku: string;
   copies: number;
@@ -63,8 +85,9 @@ export interface OrderItem {
 
 export interface Shipment {
   id: string;
-  carrier: string;
-  tracking?: string;
+  carrier: { name: string; service: string };
+  tracking?: { url: string; number: string };
+  status: string;
   dispatchDate?: string;
   items: { itemId: string }[];
   fulfilmentLocation: FulfilmentLocation;
@@ -72,36 +95,47 @@ export interface Shipment {
 
 export interface ChargeItem {
   id?: string;
-  merchantReference?: string;
-  sku?: string;
-  description?: string;
-  itemCost?: Cost;
-  shipmentCost?: Cost;
+  shipmentId?: string;
+  itemId?: string;
+  cost?: Cost;
 }
 
 export interface Charge {
   id: string;
   prodigiInvoiceNumber?: string;
   totalCost: Cost;
-  totalTax: Cost;
+  chargeType: string;
   items: ChargeItem[];
 }
 
+export interface AuthorisationDetails {
+  authorisationUrl: string;
+  paymentDetails?: Cost;
+}
+
+export interface Issue {
+  objectId: string;
+  errorCode: string;
+  description: string;
+  authorisationDetails?: AuthorisationDetails;
+}
+
+export type StatusDetailStatus =
+  | "NotStarted"
+  | "InProgress"
+  | "Complete"
+  | "Error";
+
 export interface OrderStatusDetail {
   stage: OrderStage;
+  issues: Issue[];
   details: {
-    description: string;
-    authorisationDetails?: {
-      authorisationUrl?: string;
-      paymentDetails?: {
-        status: string;
-      };
-    };
+    downloadAssets: StatusDetailStatus;
+    printReadyAssetsPrepared: StatusDetailStatus;
+    allocateProductionLocation: StatusDetailStatus;
+    inProduction: StatusDetailStatus;
+    shipping: StatusDetailStatus;
   };
-  downloadAssets?: string;
-  printReadyAssetsPrepared?: string;
-  allocatedToLab?: string;
-  inProduction?: string;
 }
 
 export interface Order {
@@ -118,6 +152,8 @@ export interface Order {
   recipient: Recipient;
   items: OrderItem[];
   metadata?: Record<string, string>;
+  branding?: Branding;
+  packingSlip?: PackingSlip;
 }
 
 export interface ListOrdersParams {
@@ -132,7 +168,7 @@ export interface ListOrdersParams {
 }
 
 export interface OrderOutcome {
-  outcome: "Created" | "AlreadyExists" | "CreatedWithIssues";
+  outcome: "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
   order: Order;
   traceParent: string;
 }
@@ -140,4 +176,6 @@ export interface OrderOutcome {
 export interface ListOrdersResponse {
   orders: Order[];
   hasMore: boolean;
+  nextUrl?: string;
+  traceParent: string;
 }

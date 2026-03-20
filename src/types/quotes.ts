@@ -23,18 +23,17 @@ export interface QuoteCostItem {
 }
 
 export interface QuoteShipment {
-  carrier: string;
+  carrier: { name: string; service: string };
   cost: Cost;
   items: { sku: string }[];
+  fulfillmentLocation: { countryCode: string; labCode: string };
 }
 
 export interface Quote {
+  shipmentMethod: string;
   costSummary: {
     items: Cost;
     shipping: Cost;
-    totalBeforeTax: Cost;
-    totalTax: Cost;
-    total: Cost;
   };
   items: QuoteCostItem[];
   shipments: QuoteShipment[];

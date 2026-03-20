@@ -60,8 +60,8 @@ client.orders.get(orderId: string): Promise<OrderOutcome>
 client.orders.list(params?: ListOrdersParams): Promise<ListOrdersResponse>
 client.orders.getActions(orderId: string): Promise<OrderActions>
 client.orders.cancel(orderId: string): Promise<ActionOutcome>
-client.orders.updateShippingMethod(orderId: string, request: UpdateShippingMethodRequest): Promise<ActionOutcome>
-client.orders.updateRecipient(orderId: string, request: UpdateRecipientRequest): Promise<ActionOutcome>
+client.orders.updateShippingMethod(orderId: string, request: UpdateShippingMethodRequest): Promise<ShippingActionOutcome>
+client.orders.updateRecipient(orderId: string, request: UpdateRecipientRequest): Promise<RecipientActionOutcome>
 client.orders.updateMetadata(orderId: string, request: UpdateMetadataRequest): Promise<ActionOutcome>
 ```
 

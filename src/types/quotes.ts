@@ -1,11 +1,10 @@
-import type { Cost, ShippingMethod, Sizing } from "./common.js";
+import type { Cost, ShippingMethod } from "./common.js";
 
 export interface QuoteItem {
   sku: string;
   copies: number;
   attributes?: Record<string, string>;
-  sizing?: Sizing;
-  assets: { printArea?: string }[];
+  assets: { printArea: string }[];
 }
 
 export interface CreateQuoteRequest {

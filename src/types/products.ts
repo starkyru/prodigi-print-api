@@ -42,16 +42,3 @@ export interface SpineResponse {
     widthMm: number;
   };
 }
-
-export interface ListProductsParams {
-  sku?: string;
-  top?: number;
-  skip?: number;
-}
-
-export interface ListProductsResponse {
-  products: Product[];
-  hasMore: boolean;
-  nextUrl?: string;
-  traceParent: string;
-}

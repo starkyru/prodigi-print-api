@@ -13,6 +13,19 @@ export interface ProdigiClientOptions {
   environment?: Environment;
 }
 
+/**
+ * Main client for interacting with the Prodigi API.
+ *
+ * @example
+ * ```ts
+ * const client = new ProdigiClient({
+ *   apiKey: "your-api-key",
+ *   environment: "sandbox",
+ * });
+ *
+ * const order = await client.orders.create(request);
+ * ```
+ */
 export class ProdigiClient {
   readonly orders: OrdersResource;
   readonly quotes: QuotesResource;
@@ -21,6 +34,9 @@ export class ProdigiClient {
 
   private readonly apiKey: string;
 
+  /**
+   * @param options - Client configuration including API key and optional environment.
+   */
   constructor(options: ProdigiClientOptions) {
     this.apiKey = options.apiKey;
     this.environment = options.environment ?? "sandbox";

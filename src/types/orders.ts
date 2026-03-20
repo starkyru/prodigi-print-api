@@ -38,14 +38,14 @@ export interface Branding {
 
 export interface PackingSlip {
   url: string;
-  status: string;
+  status?: string;
 }
 
 export interface CreateOrderItem {
   merchantReference?: string;
   sku: string;
   copies: number;
-  sizing?: Sizing;
+  sizing: Sizing;
   attributes?: Record<string, string>;
   assets: Asset[];
   recipientCost?: Cost;
@@ -159,26 +159,8 @@ export interface Order {
   packingSlip?: PackingSlip;
 }
 
-export interface ListOrdersParams {
-  top?: number;
-  skip?: number;
-  merchantReference?: string;
-  status?: string;
-  orderIds?: string[];
-  merchantReferences?: string[];
-  createdFrom?: string;
-  createdTo?: string;
-}
-
 export interface OrderOutcome {
   outcome: "Ok" | "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
   order: Order;
-  traceParent: string;
-}
-
-export interface ListOrdersResponse {
-  orders: Order[];
-  hasMore: boolean;
-  nextUrl?: string;
   traceParent: string;
 }

@@ -5,6 +5,7 @@ export interface HttpClientOptions {
   apiKey: string;
 }
 
+/** Low-level HTTP client for making authenticated requests to the Prodigi API. */
 export class HttpClient {
   readonly baseUrl: string;
   private readonly apiKey: string;
@@ -14,11 +15,21 @@ export class HttpClient {
     this.apiKey = options.apiKey;
   }
 
+  /**
+   * Send a GET request.
+   * @param path - API endpoint path (e.g. "/orders").
+   * @param query - Optional query parameters appended to the URL.
+   */
   async get<T>(path: string, query?: Record<string, unknown>): Promise<T> {
     const url = this.buildUrl(path, query);
     return this.request<T>(url, { method: "GET" });
   }
 
+  /**
+   * Send a POST request.
+   * @param path - API endpoint path (e.g. "/orders").
+   * @param body - Optional JSON-serializable request body.
+   */
   async post<T>(path: string, body?: unknown): Promise<T> {
     const url = this.buildUrl(path);
     return this.request<T>(url, {

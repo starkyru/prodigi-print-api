@@ -81,7 +81,7 @@ const order = new OrderBuilder()
 | `shippingMethod`    | `(method: ShippingMethod) => this`                                                        | **Required.** Set shipping method.                                                                                        |
 | `recipient`         | `(recipient: Recipient) => this`                                                          | **Required.** Set recipient details.                                                                                      |
 | `addItem`           | `(item: CreateOrderItem) => this`                                                         | Add a fully specified order item.                                                                                         |
-| `addPrint`          | `(sku: string, imageUrl: string, options?: { copies?: number; sizing?: Sizing }) => this` | Shorthand to add a single-asset print item. Defaults: `copies = 1`, `sizing` omitted.                                     |
+| `addPrint`          | `(sku: string, imageUrl: string, options?: { copies?: number; sizing?: Sizing }) => this` | Shorthand to add a single-asset print item. Defaults: `copies = 1`, `sizing = "fillPrintArea"`.                           |
 | `merchantReference` | `(ref: string) => this`                                                                   | Set merchant reference.                                                                                                   |
 | `metadata`          | `(metadata: Record<string, string>) => this`                                              | Set order metadata.                                                                                                       |
 | `idempotencyKey`    | `(key: string) => this`                                                                   | Set idempotency key.                                                                                                      |
@@ -311,14 +311,14 @@ interface Branding {
 
 interface PackingSlip {
   url: string;
-  status: string;
+  status?: string;
 }
 
 interface CreateOrderItem {
   merchantReference?: string;
   sku: string;
   copies: number;
-  sizing?: Sizing;
+  sizing: Sizing;
   attributes?: Record<string, string>;
   assets: Asset[];
   recipientCost?: Cost;
@@ -431,7 +431,6 @@ interface Order {
 interface ListOrdersParams {
   top?: number;
   skip?: number;
-  merchantReference?: string;
   status?: string;
   orderIds?: string[];
   merchantReferences?: string[];
@@ -460,8 +459,7 @@ interface QuoteItem {
   sku: string;
   copies: number;
   attributes?: Record<string, string>;
-  sizing?: Sizing;
-  assets: { printArea?: string }[];
+  assets: { printArea: string }[];
 }
 
 interface CreateQuoteRequest {
@@ -544,6 +542,19 @@ interface ProductOutcome {
   traceParent: string;
 }
 
+interface ListProductsParams {
+  sku?: string;
+  top?: number;
+  skip?: number;
+}
+
+interface ListProductsResponse {
+  products: Product[];
+  hasMore: boolean;
+  nextUrl?: string;
+  traceParent: string;
+}
+
 interface SpineRequest {
   sku: string;
   destinationCountryCode: string;
@@ -557,19 +568,6 @@ interface SpineResponse {
   spineInfo: {
     widthMm: number;
   };
-}
-
-interface ListProductsParams {
-  sku?: string;
-  top?: number;
-  skip?: number;
-}
-
-interface ListProductsResponse {
-  products: Product[];
-  hasMore: boolean;
-  nextUrl?: string;
-  traceParent: string;
 }
 ```
 

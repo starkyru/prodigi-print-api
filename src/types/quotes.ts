@@ -9,23 +9,26 @@ export interface QuoteItem {
 }
 
 export interface CreateQuoteRequest {
-  shippingMethod: ShippingMethod;
+  shippingMethod?: ShippingMethod;
   destinationCountryCode: string;
   items: QuoteItem[];
   currencyCode?: string;
 }
 
 export interface QuoteCostItem {
+  id?: string;
   sku: string;
-  quantity: number;
+  copies: number;
   unitCost: Cost;
-  totalCost: Cost;
+  totalCost?: Cost;
+  attributes?: Record<string, string>;
+  assets?: { printArea?: string }[];
 }
 
 export interface QuoteShipment {
   carrier: { name: string; service: string };
   cost: Cost;
-  items: { sku: string }[];
+  items: string[];
   fulfillmentLocation: { countryCode: string; labCode: string };
 }
 
@@ -39,7 +42,14 @@ export interface Quote {
   shipments: QuoteShipment[];
 }
 
+export interface QuoteIssue {
+  errorCode: string;
+  description: string;
+}
+
 export interface QuoteOutcome {
   outcome: string;
   quotes: Quote[];
+  issues?: QuoteIssue[];
+  traceParent: string;
 }

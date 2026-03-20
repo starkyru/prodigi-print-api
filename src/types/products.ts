@@ -25,6 +25,7 @@ export interface Product {
 export interface ProductOutcome {
   outcome: string;
   product: Product;
+  traceParent: string;
 }
 
 export interface SpineRequest {

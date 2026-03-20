@@ -7,8 +7,10 @@ import type {
 } from "./common.js";
 
 export interface Asset {
+  id?: string;
   printArea?: string;
   url: string;
+  status?: string;
   md5Hash?: string;
   thumbnailUrl?: string;
   pageCount?: number;
@@ -58,6 +60,7 @@ export interface CreateOrderRequest {
   idempotencyKey?: string;
   callbackUrl?: string;
   branding?: Branding;
+  packingSlip?: { url: string };
 }
 
 export interface StatusChange {
@@ -65,7 +68,7 @@ export interface StatusChange {
   timestamp: string;
 }
 
-export interface FulfilmentLocation {
+export interface FulfillmentLocation {
   countryCode: string;
   labCode: string;
 }
@@ -80,7 +83,7 @@ export interface OrderItem {
   attributes: Record<string, string>;
   assets: Asset[];
   recipientCost?: Cost;
-  statusChanges: StatusChange[];
+  statusChanges?: StatusChange[];
 }
 
 export interface Shipment {
@@ -90,7 +93,7 @@ export interface Shipment {
   status: string;
   dispatchDate?: string;
   items: { itemId: string }[];
-  fulfilmentLocation: FulfilmentLocation;
+  fulfillmentLocation: FulfillmentLocation;
 }
 
 export interface ChargeItem {
@@ -168,7 +171,7 @@ export interface ListOrdersParams {
 }
 
 export interface OrderOutcome {
-  outcome: "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
+  outcome: "Ok" | "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
   order: Order;
   traceParent: string;
 }

@@ -6,6 +6,8 @@ import type {
   ListOrdersResponse,
   OrderActions,
   OrderOutcome,
+  RecipientActionOutcome,
+  ShippingActionOutcome,
   UpdateMetadataRequest,
   UpdateRecipientRequest,
   UpdateShippingMethodRequest,
@@ -40,8 +42,8 @@ export class OrdersResource {
   async updateShippingMethod(
     orderId: string,
     request: UpdateShippingMethodRequest,
-  ): Promise<ActionOutcome> {
-    return this.http.post<ActionOutcome>(
+  ): Promise<ShippingActionOutcome> {
+    return this.http.post<ShippingActionOutcome>(
       `/orders/${orderId}/actions/updateShippingMethod`,
       request,
     );
@@ -50,8 +52,8 @@ export class OrdersResource {
   async updateRecipient(
     orderId: string,
     request: UpdateRecipientRequest,
-  ): Promise<ActionOutcome> {
-    return this.http.post<ActionOutcome>(
+  ): Promise<RecipientActionOutcome> {
+    return this.http.post<RecipientActionOutcome>(
       `/orders/${orderId}/actions/updateRecipient`,
       request,
     );

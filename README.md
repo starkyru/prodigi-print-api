@@ -50,6 +50,8 @@ const client = new ProdigiClient({
 
 ## API Reference
 
+> Full reference with all types: **[API.md](./API.md)**
+
 ### Orders
 
 ```ts

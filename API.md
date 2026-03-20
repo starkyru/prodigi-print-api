@@ -10,13 +10,16 @@ Full reference for all classes, methods, and types exported by `prodigi-print-ap
   - [Orders](#orders)
   - [Quotes](#quotes)
   - [Products](#products)
+  - [Catalogue](#catalogue)
 - [Error Handling](#error-handling)
 - [Types](#types)
   - [Common](#common)
   - [Orders](#order-types)
   - [Quotes](#quote-types)
   - [Products](#product-types)
+  - [Catalogue](#catalogue-types)
   - [Actions](#action-types)
+  - [Callbacks](#callback-types)
 
 ---
 
@@ -51,11 +54,12 @@ interface ProdigiClientOptions {
 
 ### Properties
 
-| Property   | Type               | Description          |
-| ---------- | ------------------ | -------------------- |
-| `orders`   | `OrdersResource`   | Orders API methods   |
-| `quotes`   | `QuotesResource`   | Quotes API methods   |
-| `products` | `ProductsResource` | Products API methods |
+| Property    | Type                | Description                             |
+| ----------- | ------------------- | --------------------------------------- |
+| `orders`    | `OrdersResource`    | Orders API methods                      |
+| `quotes`    | `QuotesResource`    | Quotes API methods                      |
+| `products`  | `ProductsResource`  | Products API methods                    |
+| `catalogue` | `CatalogueResource` | Public catalogue API (no auth required) |
 
 ---
 
@@ -80,7 +84,7 @@ const order = new OrderBuilder()
 | `shippingMethod`    | `(method: ShippingMethod) => this`                                                        | **Required.** Set shipping method.                                                                                        |
 | `recipient`         | `(recipient: Recipient) => this`                                                          | **Required.** Set recipient details.                                                                                      |
 | `addItem`           | `(item: CreateOrderItem) => this`                                                         | Add a fully specified order item.                                                                                         |
-| `addPrint`          | `(sku: string, imageUrl: string, options?: { copies?: number; sizing?: Sizing }) => this` | Shorthand to add a single-asset print item. Defaults: `copies = 1`, `sizing` omitted.                                     |
+| `addPrint`          | `(sku: string, imageUrl: string, options?: { copies?: number; sizing?: Sizing }) => this` | Shorthand to add a single-asset print item. Defaults: `copies = 1`, `sizing = "fillPrintArea"`.                           |
 | `merchantReference` | `(ref: string) => this`                                                                   | Set merchant reference.                                                                                                   |
 | `metadata`          | `(metadata: Record<string, string>) => this`                                              | Set order metadata.                                                                                                       |
 | `idempotencyKey`    | `(key: string) => this`                                                                   | Set idempotency key.                                                                                                      |
@@ -132,14 +136,14 @@ Cancel an order.
 Update the shipping method for an order.
 
 - **Parameters:** `orderId: string`, `request: UpdateShippingMethodRequest`
-- **Returns:** `Promise<ActionOutcome>`
+- **Returns:** `Promise<ShippingActionOutcome>`
 
 #### `client.orders.updateRecipient(orderId, request)`
 
 Update recipient details for an order.
 
-- **Parameters:** `orderId: string`, `request: UpdateRecipientRequest`
-- **Returns:** `Promise<ActionOutcome>`
+- **Parameters:** `orderId: string`, `request: UpdateRecipientRequest` (flat recipient fields, not nested)
+- **Returns:** `Promise<RecipientActionOutcome>`
 
 #### `client.orders.updateMetadata(orderId, request)`
 
@@ -179,6 +183,23 @@ Get spine width information for book products.
 
 - **Parameters:** `request: SpineRequest`
 - **Returns:** `Promise<SpineResponse>`
+
+### Catalogue
+
+The catalogue resource uses Prodigi's public product API (`https://product-api-app-live.azurewebsites.net/api`) and requires no authentication.
+
+#### `client.catalogue.list()`
+
+List all categories and products in the catalogue.
+
+- **Returns:** `Promise<CatalogueListResponse>` (`Record<string, CatalogueCategory>`)
+
+#### `client.catalogue.get(slug)`
+
+Get detailed product information including all SKU variants, sizes, asset dimensions, and pricing.
+
+- **Parameters:** `slug: string` — product slug (e.g. `"cold-press-watercolour-paper"`)
+- **Returns:** `Promise<CatalogueProductDetail>`
 
 ---
 
@@ -279,8 +300,10 @@ interface Recipient {
 
 ```ts
 interface Asset {
+  id?: string;
   printArea?: string;
   url: string;
+  status?: string;
   md5Hash?: string;
   thumbnailUrl?: string;
   pageCount?: number;
@@ -308,14 +331,14 @@ interface Branding {
 
 interface PackingSlip {
   url: string;
-  status: string;
+  status?: string;
 }
 
 interface CreateOrderItem {
   merchantReference?: string;
   sku: string;
   copies: number;
-  sizing?: Sizing;
+  sizing: Sizing;
   attributes?: Record<string, string>;
   assets: Asset[];
   recipientCost?: Cost;
@@ -330,6 +353,7 @@ interface CreateOrderRequest {
   idempotencyKey?: string;
   callbackUrl?: string;
   branding?: Branding;
+  packingSlip?: { url: string };
 }
 
 interface StatusChange {
@@ -337,7 +361,7 @@ interface StatusChange {
   timestamp: string;
 }
 
-interface FulfilmentLocation {
+interface FulfillmentLocation {
   countryCode: string;
   labCode: string;
 }
@@ -352,7 +376,7 @@ interface OrderItem {
   attributes: Record<string, string>;
   assets: Asset[];
   recipientCost?: Cost;
-  statusChanges: StatusChange[];
+  statusChanges?: StatusChange[];
 }
 
 interface Shipment {
@@ -362,7 +386,7 @@ interface Shipment {
   status: string;
   dispatchDate?: string;
   items: { itemId: string }[];
-  fulfilmentLocation: FulfilmentLocation;
+  fulfillmentLocation: FulfillmentLocation;
 }
 
 interface ChargeItem {
@@ -427,7 +451,6 @@ interface Order {
 interface ListOrdersParams {
   top?: number;
   skip?: number;
-  merchantReference?: string;
   status?: string;
   orderIds?: string[];
   merchantReferences?: string[];
@@ -436,7 +459,7 @@ interface ListOrdersParams {
 }
 
 interface OrderOutcome {
-  outcome: "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
+  outcome: "Ok" | "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
   order: Order;
   traceParent: string;
 }
@@ -456,28 +479,30 @@ interface QuoteItem {
   sku: string;
   copies: number;
   attributes?: Record<string, string>;
-  sizing?: Sizing;
-  assets: { printArea?: string }[];
+  assets: { printArea: string }[];
 }
 
 interface CreateQuoteRequest {
-  shippingMethod: ShippingMethod;
+  shippingMethod?: ShippingMethod;
   destinationCountryCode: string;
   items: QuoteItem[];
   currencyCode?: string;
 }
 
 interface QuoteCostItem {
+  id?: string;
   sku: string;
-  quantity: number;
+  copies: number;
   unitCost: Cost;
-  totalCost: Cost;
+  totalCost?: Cost;
+  attributes?: Record<string, string>;
+  assets?: { printArea?: string }[];
 }
 
 interface QuoteShipment {
   carrier: { name: string; service: string };
   cost: Cost;
-  items: { sku: string }[];
+  items: string[];
   fulfillmentLocation: { countryCode: string; labCode: string };
 }
 
@@ -491,9 +516,16 @@ interface Quote {
   shipments: QuoteShipment[];
 }
 
+interface QuoteIssue {
+  errorCode: string;
+  description: string;
+}
+
 interface QuoteOutcome {
   outcome: string;
   quotes: Quote[];
+  issues?: QuoteIssue[];
+  traceParent: string;
 }
 ```
 
@@ -527,6 +559,20 @@ interface Product {
 interface ProductOutcome {
   outcome: string;
   product: Product;
+  traceParent: string;
+}
+
+interface ListProductsParams {
+  sku?: string;
+  top?: number;
+  skip?: number;
+}
+
+interface ListProductsResponse {
+  products: Product[];
+  hasMore: boolean;
+  nextUrl?: string;
+  traceParent: string;
 }
 
 interface SpineRequest {
@@ -543,18 +589,93 @@ interface SpineResponse {
     widthMm: number;
   };
 }
+```
 
-interface ListProductsParams {
-  sku?: string;
-  top?: number;
-  skip?: number;
+### Catalogue Types
+
+```ts
+interface CataloguePricing {
+  source: string;
+  value: string;
 }
 
-interface ListProductsResponse {
-  products: Product[];
-  hasMore: boolean;
-  nextUrl?: string;
-  traceParent: string;
+interface CatalogueProductSummary {
+  name: string;
+  slug: string;
+  productSlug: string;
+  global: boolean;
+  sizes: string[];
+  pricing: CataloguePricing[];
+  manufacturingRegions: string[];
+  image: string;
+  imageRequired: boolean;
+  loreSlug?: string;
+}
+
+interface CatalogueCategory {
+  name: string;
+  slug: string;
+  fullSlug?: string;
+  images?: string[];
+  products: Record<string, CatalogueProductSummary>;
+  subCategories: Record<string, CatalogueCategory>;
+}
+
+type CatalogueListResponse = Record<string, CatalogueCategory>;
+
+interface CatalogueVariantAsset {
+  name: string;
+  required: boolean;
+  horizontalInches: number;
+  verticalInches: number;
+  sizeUnits: string;
+  outputDpi: number;
+  fileOutputFormat: string;
+}
+
+interface CatalogueVariantAttribute {
+  value: string[];
+}
+
+interface CatalogueVariantRow {
+  sku: string;
+  description: string;
+  attributeDescription: string;
+  productType: string;
+  price: string;
+  assets: CatalogueVariantAsset[];
+  size?: string;
+  orientation?: string;
+  fulfilledFrom?: string;
+}
+
+interface CatalogueVariantColumn {
+  enableSorting: boolean;
+  name: string;
+  filterType: string;
+  options?: string[];
+}
+
+interface CatalogueVariants {
+  columns: Record<string, CatalogueVariantColumn>;
+  rows: CatalogueVariantRow[];
+}
+
+interface CatalogueManufacturing {
+  regions: string[];
+  time: string;
+  shipsTo: string[];
+}
+
+interface CatalogueProductDetail {
+  name: string;
+  availability: string;
+  description: string[];
+  features: string[];
+  manufacturing: CatalogueManufacturing;
+  pricing: CataloguePricing[];
+  variants: CatalogueVariants;
+  sizes: string[];
 }
 ```
 
@@ -579,7 +700,10 @@ interface UpdateShippingMethodRequest {
 }
 
 interface UpdateRecipientRequest {
-  recipient: Recipient;
+  name: string;
+  email?: string;
+  phoneNumber?: string;
+  address: Address;
 }
 
 interface UpdateMetadataRequest {
@@ -589,7 +713,8 @@ interface UpdateMetadataRequest {
 interface ShipmentUpdateResult {
   shipmentId: string;
   successful: boolean;
-  errorMessage?: string;
+  errorCode?: string;
+  description?: string;
 }
 
 interface ActionOutcome {
@@ -599,10 +724,40 @@ interface ActionOutcome {
 }
 
 interface ShippingActionOutcome extends ActionOutcome {
-  shipmentUpdateResults?: ShipmentUpdateResult[];
+  shippingUpdateResults?: ShipmentUpdateResult[];
 }
 
 interface RecipientActionOutcome extends ActionOutcome {
-  shippingUpdateResults?: ShipmentUpdateResult[];
+  shipmentUpdateResults?: ShipmentUpdateResult[];
 }
 ```
+
+### Callback Types
+
+Types for handling [Prodigi webhook callbacks](https://www.prodigi.com/print-api/docs/reference/#callbacks) (CloudEvents v1.0).
+
+Set `callbackUrl` on an order to receive status change notifications.
+
+```ts
+interface CallbackEvent {
+  specversion: string;
+  type: string;
+  source: string;
+  id: string;
+  time: string;
+  datacontenttype: string;
+  subject: string;
+  data: Order;
+}
+```
+
+| Field             | Example                                             | Description                  |
+| ----------------- | --------------------------------------------------- | ---------------------------- |
+| `specversion`     | `"1.0"`                                             | CloudEvents spec version     |
+| `type`            | `"com.prodigi.order.status.stage.changed#Complete"` | Event type with stage suffix |
+| `source`          | `"https://api.prodigi.com/v4.0"`                    | API endpoint URI             |
+| `id`              | `"evt_305174"`                                      | Unique event ID              |
+| `time`            | `"2024-01-15T10:30:00Z"`                            | RFC 3339 timestamp           |
+| `datacontenttype` | `"application/json"`                                | Always JSON                  |
+| `subject`         | `"ord_1234567"`                                     | Order ID                     |
+| `data`            |                                                     | Full `Order` object          |

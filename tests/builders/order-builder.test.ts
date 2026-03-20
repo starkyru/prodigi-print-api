@@ -49,6 +49,7 @@ describe("OrderBuilder", () => {
       .addItem({
         sku: "GLOBAL-CAN-16x20",
         copies: 1,
+        sizing: "fillPrintArea",
         assets: [{ url: "https://example.com/art.jpg", printArea: "default" }],
         attributes: { wrap: "MirrorWrap" },
       })

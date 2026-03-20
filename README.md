@@ -60,8 +60,8 @@ client.orders.get(orderId: string): Promise<OrderOutcome>
 client.orders.list(params?: ListOrdersParams): Promise<ListOrdersResponse>
 client.orders.getActions(orderId: string): Promise<OrderActions>
 client.orders.cancel(orderId: string): Promise<ActionOutcome>
-client.orders.updateShippingMethod(orderId: string, request: UpdateShippingMethodRequest): Promise<ActionOutcome>
-client.orders.updateRecipient(orderId: string, request: UpdateRecipientRequest): Promise<ActionOutcome>
+client.orders.updateShippingMethod(orderId: string, request: UpdateShippingMethodRequest): Promise<ShippingActionOutcome>
+client.orders.updateRecipient(orderId: string, request: UpdateRecipientRequest): Promise<RecipientActionOutcome>
 client.orders.updateMetadata(orderId: string, request: UpdateMetadataRequest): Promise<ActionOutcome>
 ```
 
@@ -76,6 +76,15 @@ client.quotes.create(request: CreateQuoteRequest): Promise<QuoteOutcome>
 ```ts
 client.products.get(sku: string): Promise<ProductOutcome>
 client.products.getSpine(request: SpineRequest): Promise<SpineResponse>
+```
+
+### Catalogue
+
+Browse the public product catalogue (no API key required):
+
+```ts
+client.catalogue.list(): Promise<CatalogueListResponse>
+client.catalogue.get(slug: string): Promise<CatalogueProductDetail>
 ```
 
 ## OrderBuilder
@@ -150,6 +159,14 @@ import type {
   ProductOutcome,
   SpineRequest,
   SpineResponse,
+
+  // Catalogue
+  CatalogueListResponse,
+  CatalogueCategory,
+  CatalogueProductSummary,
+  CatalogueProductDetail,
+  CatalogueVariantRow,
+  CatalogueVariantAsset,
 
   // Client
   ProdigiClientOptions,

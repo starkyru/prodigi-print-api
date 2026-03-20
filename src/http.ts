@@ -2,23 +2,34 @@ import { ProdigiApiError } from "./errors.js";
 
 export interface HttpClientOptions {
   baseUrl: string;
-  apiKey: string;
+  apiKey?: string;
 }
 
+/** Low-level HTTP client for making authenticated requests to the Prodigi API. */
 export class HttpClient {
   readonly baseUrl: string;
-  private readonly apiKey: string;
+  private readonly apiKey: string | undefined;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl;
     this.apiKey = options.apiKey;
   }
 
+  /**
+   * Send a GET request.
+   * @param path - API endpoint path (e.g. "/orders").
+   * @param query - Optional query parameters appended to the URL.
+   */
   async get<T>(path: string, query?: Record<string, unknown>): Promise<T> {
     const url = this.buildUrl(path, query);
     return this.request<T>(url, { method: "GET" });
   }
 
+  /**
+   * Send a POST request.
+   * @param path - API endpoint path (e.g. "/orders").
+   * @param body - Optional JSON-serializable request body.
+   */
   async post<T>(path: string, body?: unknown): Promise<T> {
     const url = this.buildUrl(path);
     return this.request<T>(url, {
@@ -49,9 +60,12 @@ export class HttpClient {
 
   private async request<T>(url: string, init: RequestInit): Promise<T> {
     const headers: Record<string, string> = {
-      "X-API-Key": this.apiKey,
       "Content-Type": "application/json",
     };
+
+    if (this.apiKey) {
+      headers["X-API-Key"] = this.apiKey;
+    }
 
     const response = await globalThis.fetch(url, {
       ...init,

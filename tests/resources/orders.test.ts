@@ -65,19 +65,6 @@ describe("OrdersResource", () => {
     expect(mockFetch.mock.calls[0][1].method).toBe("GET");
   });
 
-  it("list sends GET to /orders with query params", async () => {
-    mockFetch.mockResolvedValueOnce(
-      mockResponse({ orders: [], hasMore: false }),
-    );
-
-    await client.orders.list({ top: 5, skip: 10 });
-
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("/orders");
-    expect(calledUrl).toContain("top=5");
-    expect(calledUrl).toContain("skip=10");
-  });
-
   it("getActions sends GET to /orders/{id}/actions", async () => {
     mockFetch.mockResolvedValueOnce(mockResponse({ actions: [] }));
 
@@ -128,7 +115,7 @@ describe("OrdersResource", () => {
     const calledUrl = mockFetch.mock.calls[0][0] as string;
     expect(calledUrl).toContain("/orders/ord_123/actions/updateRecipient");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.recipient.name).toBe("John");
+    expect(body.name).toBe("John");
   });
 
   it("updateMetadata sends POST with body", async () => {

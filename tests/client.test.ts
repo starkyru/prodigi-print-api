@@ -15,10 +15,11 @@ describe("ProdigiClient", () => {
     expect(client.environment).toBe("production");
   });
 
-  it("exposes orders, quotes, and products resources", () => {
+  it("exposes orders, quotes, products, and catalogue resources", () => {
     const client = new ProdigiClient({ apiKey: "test-key" });
     expect(client.orders).toBeDefined();
     expect(client.quotes).toBeDefined();
     expect(client.products).toBeDefined();
+    expect(client.catalogue).toBeDefined();
   });
 });

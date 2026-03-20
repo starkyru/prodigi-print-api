@@ -25,6 +25,7 @@ export interface Product {
 export interface ProductOutcome {
   outcome: string;
   product: Product;
+  traceParent: string;
 }
 
 export interface SpineRequest {
@@ -40,17 +41,4 @@ export interface SpineResponse {
   spineInfo: {
     widthMm: number;
   };
-}
-
-export interface ListProductsParams {
-  sku?: string;
-  top?: number;
-  skip?: number;
-}
-
-export interface ListProductsResponse {
-  products: Product[];
-  hasMore: boolean;
-  nextUrl?: string;
-  traceParent: string;
 }

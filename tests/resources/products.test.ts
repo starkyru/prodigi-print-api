@@ -34,25 +34,6 @@ describe("ProductsResource", () => {
     expect(mockFetch.mock.calls[0][1].method).toBe("GET");
   });
 
-  it("list sends GET to /products with query params", async () => {
-    mockFetch.mockResolvedValueOnce(
-      mockResponse({
-        products: [{ sku: "GLOBAL-PHO-4x6" }],
-        hasMore: false,
-        traceParent: "test-trace",
-      }),
-    );
-
-    await client.products.list({ sku: "GLOBAL-PHO", top: 10, skip: 0 });
-
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("/products");
-    expect(calledUrl).toContain("sku=GLOBAL-PHO");
-    expect(calledUrl).toContain("top=10");
-    expect(calledUrl).toContain("skip=0");
-    expect(mockFetch.mock.calls[0][1].method).toBe("GET");
-  });
-
   it("getSpine sends POST to /products/spine", async () => {
     mockFetch.mockResolvedValueOnce(
       mockResponse({

@@ -113,6 +113,29 @@ describe("HttpClient", () => {
     await expect(client.get("/orders/bad")).rejects.toThrow(ProdigiApiError);
   });
 
+  it("omits X-API-Key header when apiKey is not provided", async () => {
+    const noAuthClient = new HttpClient({
+      baseUrl: "https://example.com/api",
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ data: "ok" }),
+      headers: new Headers(),
+    });
+
+    await noAuthClient.get("/test");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/api/test",
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          "X-API-Key": expect.anything(),
+        }),
+      }),
+    );
+  });
+
   it("ProdigiApiError carries statusCode, traceParent, and data", async () => {
     const errorData = { message: "Not found", errors: [] };
 

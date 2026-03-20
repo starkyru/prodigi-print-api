@@ -36,12 +36,17 @@ describe("ProductsResource", () => {
 
   it("getSpine sends POST to /products/spine", async () => {
     mockFetch.mockResolvedValueOnce(
-      mockResponse({ outcome: "Ok", spineWidthMm: 12.5 }),
+      mockResponse({
+        success: true,
+        message: "Ok",
+        spineInfo: { widthMm: 12.5 },
+      }),
     );
 
     await client.products.getSpine({
       sku: "GLOBAL-PHB-A4-HRD",
-      pageCount: 100,
+      numberOfPages: 100,
+      destinationCountryCode: "US",
     });
 
     const calledUrl = mockFetch.mock.calls[0][0] as string;
@@ -49,6 +54,6 @@ describe("ProductsResource", () => {
     expect(mockFetch.mock.calls[0][1].method).toBe("POST");
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.sku).toBe("GLOBAL-PHB-A4-HRD");
-    expect(body.pageCount).toBe(100);
+    expect(body.numberOfPages).toBe(100);
   });
 });

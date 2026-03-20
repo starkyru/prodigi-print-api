@@ -1,17 +1,12 @@
-export interface PrintArea {
-  name: string;
-  required: boolean;
-}
-
-export interface VariantAttribute {
-  name: string;
-  value: string;
+export interface PrintAreaSize {
+  horizontalResolution: number;
+  verticalResolution: number;
 }
 
 export interface Variant {
-  attributes: VariantAttribute[];
+  attributes: Record<string, string>;
   shipsTo: string[];
-  printAreaSizes: Record<string, { widthMm: number; heightMm: number }>;
+  printAreaSizes: Record<string, PrintAreaSize>;
 }
 
 export interface Product {
@@ -22,8 +17,9 @@ export interface Product {
     height: number;
     units: string;
   };
+  attributes: Record<string, string[]>;
+  printAreas: Record<string, { required: boolean }>;
   variants: Variant[];
-  printAreas: PrintArea[];
 }
 
 export interface ProductOutcome {
@@ -33,10 +29,15 @@ export interface ProductOutcome {
 
 export interface SpineRequest {
   sku: string;
-  pageCount: number;
+  destinationCountryCode: string;
+  state?: string;
+  numberOfPages: number;
 }
 
 export interface SpineResponse {
-  outcome: string;
-  spineWidthMm: number;
+  success: boolean;
+  message: string;
+  spineInfo: {
+    widthMm: number;
+  };
 }

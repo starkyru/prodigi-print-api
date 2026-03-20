@@ -1,4 +1,9 @@
-export type ShippingMethod = "Budget" | "Standard" | "Express" | "Overnight";
+export type ShippingMethod =
+  | "Budget"
+  | "Standard"
+  | "StandardPlus"
+  | "Express"
+  | "Overnight";
 
 export type Sizing = "fillPrintArea" | "fitPrintArea" | "stretchToPrintArea";
 

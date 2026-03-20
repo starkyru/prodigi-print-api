@@ -24,12 +24,12 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      # Bump minor version
+      # Bump patch version
       - name: Bump version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version minor --no-git-tag-version
+          npm version patch --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
           if [ "${{ github.ref_name }}" = "test" ]; then
             npm version "${VERSION}-test" --no-git-tag-version
@@ -48,3 +48,5 @@ jobs:
           else
             npm publish --provenance --access public
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

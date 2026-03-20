@@ -163,6 +163,18 @@ npm run build     # build ESM + CJS (tsup)
 npm run typecheck  # tsc --noEmit
 ```
 
+## CI/CD
+
+Pushing to `main` or `test` triggers the GitHub Actions publish workflow (`.github/workflows/publish.yml`):
+
+1. Runs lint, typecheck, and tests
+2. Bumps the **patch** version automatically
+3. On the `test` branch, appends a `-test` prerelease suffix
+4. Commits, tags, and pushes the version bump
+5. Publishes to npm with provenance (the `test` branch publishes under the `test` dist-tag)
+
+**Required secret:** `NPM_TOKEN` — an npm access token with publish permissions.
+
 ## License
 
 MIT

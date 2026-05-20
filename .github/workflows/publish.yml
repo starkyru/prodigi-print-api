@@ -16,8 +16,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
+          node-version: 22
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
@@ -40,7 +39,7 @@ jobs:
           git tag "v${NEW_VERSION}"
           git push origin ${{ github.ref_name }} --tags
 
-      # Publish with provenance (trusted publishing via OIDC)
+      # Publish via OIDC trusted publishing (no token needed)
       - name: Publish to npm
         run: |
           if [ "${{ github.ref_name }}" = "test" ]; then
@@ -48,5 +47,3 @@ jobs:
           else
             npm publish --provenance --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

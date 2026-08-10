@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ProdigiClient } from "../../src/client.js";
+import { jsonResponse } from "../helpers/mock-response.js";
 
 describe("ProductsResource", () => {
   const originalFetch = globalThis.fetch;
@@ -16,15 +17,9 @@ describe("ProductsResource", () => {
     globalThis.fetch = originalFetch;
   });
 
-  const mockResponse = (data: unknown) => ({
-    ok: true,
-    json: () => Promise.resolve(data),
-    headers: new Headers(),
-  });
-
   it("get sends GET to /products/{sku}", async () => {
     mockFetch.mockResolvedValueOnce(
-      mockResponse({ outcome: "Ok", product: { sku: "GLOBAL-PHO-4x6" } }),
+      jsonResponse({ outcome: "Ok", product: { sku: "GLOBAL-PHO-4x6" } }),
     );
 
     await client.products.get("GLOBAL-PHO-4x6");
@@ -36,7 +31,7 @@ describe("ProductsResource", () => {
 
   it("getSpine sends POST to /products/spine", async () => {
     mockFetch.mockResolvedValueOnce(
-      mockResponse({
+      jsonResponse({
         success: true,
         message: "Ok",
         spineInfo: { widthMm: 12.5 },

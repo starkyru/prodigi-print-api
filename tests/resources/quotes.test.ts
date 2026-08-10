@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ProdigiClient } from "../../src/client.js";
+import { jsonResponse } from "../helpers/mock-response.js";
 
 describe("QuotesResource", () => {
   const originalFetch = globalThis.fetch;
@@ -17,11 +18,9 @@ describe("QuotesResource", () => {
   });
 
   it("create sends POST to /quotes", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ outcome: "Ok", quotes: [] }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ outcome: "Ok", quotes: [] }),
+    );
 
     await client.quotes.create({
       shippingMethod: "Standard",

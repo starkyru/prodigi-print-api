@@ -1,4 +1,5 @@
 import { HttpClient } from "./http.js";
+import type { RetryOptions } from "./retry.js";
 import { CatalogueResource } from "./resources/catalogue.js";
 import { OrdersResource } from "./resources/orders.js";
 import { QuotesResource } from "./resources/quotes.js";
@@ -13,6 +14,11 @@ export type Environment = "sandbox" | "production";
 export interface ProdigiClientOptions {
   apiKey: string;
   environment?: Environment;
+  /**
+   * Retry policy for transient failures (429, 5xx, network errors), or `false`
+   * to disable retries. Defaults to 3 attempts with exponential backoff.
+   */
+  retry?: RetryOptions | false;
 }
 
 /**
@@ -47,13 +53,14 @@ export class ProdigiClient {
     const baseUrl =
       this.environment === "production" ? PRODUCTION_URL : SANDBOX_URL;
 
-    const http = new HttpClient({ baseUrl, apiKey: this.apiKey });
+    const retry = options.retry;
+    const http = new HttpClient({ baseUrl, apiKey: this.apiKey, retry });
 
     this.orders = new OrdersResource(http);
     this.quotes = new QuotesResource(http);
     this.products = new ProductsResource(http);
 
-    const catalogueHttp = new HttpClient({ baseUrl: CATALOGUE_URL });
+    const catalogueHttp = new HttpClient({ baseUrl: CATALOGUE_URL, retry });
     this.catalogue = new CatalogueResource(catalogueHttp);
   }
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { HttpClient } from "../src/http.js";
 import { ProdigiApiError } from "../src/errors.js";
+import { jsonResponse, textResponse } from "./helpers/mock-response.js";
 
 describe("HttpClient", () => {
   const originalFetch = globalThis.fetch;
@@ -21,11 +22,7 @@ describe("HttpClient", () => {
   });
 
   it("sends X-API-Key header on GET", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ data: "ok" }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ data: "ok" }));
 
     await client.get("/orders");
 
@@ -39,11 +36,7 @@ describe("HttpClient", () => {
   });
 
   it("sends JSON body on POST", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ outcome: "Created" }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ outcome: "Created" }));
 
     await client.post("/orders", { foo: "bar" });
 
@@ -60,11 +53,7 @@ describe("HttpClient", () => {
   });
 
   it("serializes query params", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ orders: [] }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ orders: [] }));
 
     await client.get("/orders", { top: 10, skip: 0 });
 
@@ -74,11 +63,7 @@ describe("HttpClient", () => {
   });
 
   it("serializes array query params", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ orders: [] }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ orders: [] }));
 
     await client.get("/orders", { orderIds: ["a", "b"] });
 
@@ -88,11 +73,7 @@ describe("HttpClient", () => {
   });
 
   it("skips undefined query params", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({}),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
     await client.get("/orders", { top: 10, skip: undefined });
 
@@ -102,13 +83,12 @@ describe("HttpClient", () => {
   });
 
   it("throws ProdigiApiError on non-2xx", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: () =>
-        Promise.resolve({ message: "Bad request", errors: ["invalid"] }),
-      headers: new Headers({ traceparent: "trace-123" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        { message: "Bad request", errors: ["invalid"] },
+        { status: 400 },
+      ),
+    );
 
     await expect(client.get("/orders/bad")).rejects.toThrow(ProdigiApiError);
   });
@@ -118,11 +98,7 @@ describe("HttpClient", () => {
       baseUrl: "https://example.com/api",
     });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ data: "ok" }),
-      headers: new Headers(),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ data: "ok" }));
 
     await noAuthClient.get("/test");
 
@@ -139,12 +115,12 @@ describe("HttpClient", () => {
   it("ProdigiApiError carries statusCode, traceParent, and data", async () => {
     const errorData = { message: "Not found", errors: [] };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: () => Promise.resolve(errorData),
-      headers: new Headers({ traceparent: "trace-abc" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(errorData, {
+        status: 404,
+        headers: { traceparent: "trace-abc" },
+      }),
+    );
 
     try {
       await client.get("/orders/missing");
@@ -157,5 +133,35 @@ describe("HttpClient", () => {
       expect(apiErr.data).toEqual(errorData);
       expect(apiErr.message).toBe("Not found");
     }
+  });
+
+  describe("body parsing", () => {
+    it("returns null for an empty body", async () => {
+      mockFetch.mockResolvedValueOnce(new Response("", { status: 200 }));
+
+      await expect(client.get("/orders")).resolves.toBe(null);
+    });
+
+    it("keeps a non-JSON error body as raw text and falls back to a status message", async () => {
+      mockFetch.mockResolvedValueOnce(
+        textResponse("<html>502 Bad Gateway</html>", { status: 502 }),
+      );
+
+      const noRetry = new HttpClient({
+        baseUrl: "https://example.com/api",
+        retry: false,
+      });
+
+      try {
+        await noRetry.get("/test");
+        expect.fail("Should have thrown");
+      } catch (err) {
+        const apiErr = err as ProdigiApiError;
+        expect(apiErr).toBeInstanceOf(ProdigiApiError);
+        expect(apiErr.statusCode).toBe(502);
+        expect(apiErr.message).toBe("API error: 502");
+        expect(apiErr.data).toBe("<html>502 Bad Gateway</html>");
+      }
+    });
   });
 });

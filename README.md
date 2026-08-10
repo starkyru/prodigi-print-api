@@ -346,6 +346,12 @@ Pushing to `main` or `test`:
 
 Publishing uses npm OIDC trusted publishing, so no npm token secret is required.
 
+**Cutting a minor or major release.** Step 2 is skipped when `package.json` is already ahead of the version published on npm, and that version is published as-is. So bump deliberately on your branch before merging:
+
+```sh
+npm version minor --no-git-tag-version   # or major
+```
+
 ### E2E (`.github/workflows/e2e.yml`)
 
 Runs the sandbox e2e suite daily at 06:00 UTC, and on manual dispatch, to catch contract drift with Prodigi that unit tests cannot see.

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ProdigiClient } from "../../src/client.js";
+import { jsonResponse } from "../helpers/mock-response.js";
 
 describe("CatalogueResource", () => {
   const originalFetch = globalThis.fetch;
@@ -16,15 +17,9 @@ describe("CatalogueResource", () => {
     globalThis.fetch = originalFetch;
   });
 
-  const mockResponse = (data: unknown) => ({
-    ok: true,
-    json: () => Promise.resolve(data),
-    headers: new Headers(),
-  });
-
   it("list sends GET to /catalogue with no X-API-Key header", async () => {
     mockFetch.mockResolvedValueOnce(
-      mockResponse({ "fine-art-prints": { name: "Fine Art Prints" } }),
+      jsonResponse({ "fine-art-prints": { name: "Fine Art Prints" } }),
     );
 
     await client.catalogue.list();
@@ -40,7 +35,7 @@ describe("CatalogueResource", () => {
 
   it("get sends GET to /catalogue/{slug} with no X-API-Key header", async () => {
     mockFetch.mockResolvedValueOnce(
-      mockResponse({ name: "Cold Press Watercolour Paper", variants: {} }),
+      jsonResponse({ name: "Cold Press Watercolour Paper", variants: {} }),
     );
 
     await client.catalogue.get("cold-press-watercolour-paper");

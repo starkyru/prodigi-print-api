@@ -1,0 +1,50 @@
+name: E2E (sandbox)
+
+# Contract drift with Prodigi is only visible against a live sandbox, which the
+# publish workflow cannot do (no key, and fork PRs get no secrets). This runs on
+# a schedule instead, and no-ops cleanly when the secret is not configured.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-sandbox
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      # The `secrets` context is not available in a job-level `if:`, so gate on a
+      # step output instead. A missing secret leaves the job green.
+      - name: Check for sandbox API key
+        id: guard
+        env:
+          PRODIGI_SANDBOX_API_KEY: ${{ secrets.PRODIGI_SANDBOX_API_KEY }}
+        run: |
+          if [ -z "${PRODIGI_SANDBOX_API_KEY}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PRODIGI_SANDBOX_API_KEY is not configured — skipping the e2e suite."
+            echo "Skipped: no PRODIGI_SANDBOX_API_KEY secret." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.enabled == 'true'
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+        if: steps.guard.outputs.enabled == 'true'
+
+      - name: Run e2e suite against the Prodigi sandbox
+        if: steps.guard.outputs.enabled == 'true'
+        env:
+          API_KEY: ${{ secrets.PRODIGI_SANDBOX_API_KEY }}
+        run: npm run test:e2e

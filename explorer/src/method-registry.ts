@@ -56,6 +56,22 @@ const methods: MethodDef[] = [
     execute: (client, values) => client.orders.get(values.orderId),
   },
   {
+    id: "orders.list",
+    resource: "Orders",
+    description: "List orders with optional filtering and pagination.",
+    params: [
+      {
+        name: "params",
+        label: "Filters",
+        kind: "json",
+        required: false,
+        defaultValue: JSON.stringify({ top: 10, skip: 0 }, null, 2),
+      },
+    ],
+    execute: (client, values) =>
+      client.orders.list(values.params ? JSON.parse(values.params) : undefined),
+  },
+  {
     id: "orders.getActions",
     resource: "Orders",
     description: "Get available actions for an order.",

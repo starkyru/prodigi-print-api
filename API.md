@@ -11,6 +11,8 @@ Full reference for all classes, methods, and types exported by `prodigi-print-ap
   - [Quotes](#quotes)
   - [Products](#products)
   - [Catalogue](#catalogue)
+- [Webhooks](#webhooks)
+- [Retries](#retries)
 - [Error Handling](#error-handling)
 - [Types](#types)
   - [Common](#common)
@@ -44,8 +46,12 @@ type Environment = "sandbox" | "production";
 interface ProdigiClientOptions {
   apiKey: string;
   environment?: Environment;
+  /** Retry policy for transient failures, or `false` to disable. */
+  retry?: RetryOptions | false;
 }
 ```
+
+See [Retries](#retries) for the `retry` option.
 
 | Environment  | Base URL                               |
 | ------------ | -------------------------------------- |
@@ -102,6 +108,7 @@ Create a new order.
 
 - **Parameters:** `request: CreateOrderRequest`
 - **Returns:** `Promise<OrderOutcome>`
+- **Retries:** only when `request.idempotencyKey` is set — see [Retries](#retries).
 
 #### `client.orders.get(orderId)`
 
@@ -112,10 +119,22 @@ Retrieve a single order by ID.
 
 #### `client.orders.list(params?)`
 
-List orders with optional filtering.
+List orders with optional filtering and pagination. Maps to `GET /orders`.
 
 - **Parameters:** `params?: ListOrdersParams`
 - **Returns:** `Promise<ListOrdersResponse>`
+
+| Filter               | Query parameter      | Notes                                                                        |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------- |
+| `top`                | `top`                | 1–100. Server default 10.                                                    |
+| `skip`               | `skip`               | `>= 0`. Server default 0.                                                    |
+| `createdFrom`        | `createdFrom`        | `Date` or ISO 8601 string. A `Date` is serialized with `toISOString()`.      |
+| `createdTo`          | `createdTo`          | `Date` or ISO 8601 string.                                                   |
+| `status`             | `status`             | One `OrderListStatus` value.                                                 |
+| `orderIds`           | `orderIds`           | Repeated once per value.                                                     |
+| `merchantReferences` | `merchantReferences` | **Plural, and an array** — not `merchantReference`. Repeated once per value. |
+
+Filters that are not supplied are omitted from the query string entirely.
 
 #### `client.orders.getActions(orderId)`
 
@@ -170,13 +189,6 @@ Get product details by SKU.
 - **Parameters:** `sku: string`
 - **Returns:** `Promise<ProductOutcome>`
 
-#### `client.products.list(params?)`
-
-List products with optional filtering.
-
-- **Parameters:** `params?: ListProductsParams`
-- **Returns:** `Promise<ListProductsResponse>`
-
 #### `client.products.getSpine(request)`
 
 Get spine width information for book products.
@@ -203,10 +215,97 @@ Get detailed product information including all SKU variants, sizes, asset dimens
 
 ---
 
+## Webhooks
+
+```ts
+import { parseCallbackEvent, isCallbackEvent } from "prodigi-print-api";
+```
+
+### `parseCallbackEvent(payload)`
+
+Validate an incoming Prodigi callback and parse it into a typed event.
+
+- **Parameters:** `payload: unknown` — the request body, either a JSON string or already-parsed JSON.
+- **Returns:** `ProdigiCallbackEvent` — a discriminated union keyed on `kind`.
+- **Throws:** `ProdigiWebhookError` if the body is not JSON, or not a Prodigi callback envelope.
+
+```ts
+const event = parseCallbackEvent(await request.text());
+
+switch (event.kind) {
+  case "order.status.stage.changed":
+    // event.order.status.stage is typed as OrderStage
+    break;
+  case "order.shipments.shipment":
+    break;
+  case "unknown":
+    // forward-compatible: new Prodigi event types land here
+    break;
+}
+```
+
+### `isCallbackEvent(payload)`
+
+Structural type guard for the raw envelope.
+
+- **Parameters:** `payload: unknown`
+- **Returns:** `payload is CallbackEvent`
+
+Checks the CloudEvents attributes and that `data.order.id` is a non-empty string. It does not deep-validate the order.
+
+### Authenticity
+
+Prodigi does **not** sign callbacks — the v4.0 API has no signature header, shared secret, or other authentication mechanism. Both functions validate **shape only** and cannot establish that a request came from Prodigi. This SDK does not invent a verification scheme Prodigi does not implement.
+
+Protect the endpoint by keeping the callback URL unguessable and re-reading the order with `client.orders.get(event.subject)` before acting on it.
+
+---
+
+## Retries
+
+Transient failures are retried with exponential backoff and equal jitter.
+
+```ts
+import { DEFAULT_RETRY_POLICY } from "prodigi-print-api";
+
+interface RetryOptions {
+  maxAttempts?: number; // default 3, clamped to >= 1
+  initialDelayMs?: number; // default 500
+  maxDelayMs?: number; // default 8000
+  maxRetryAfterMs?: number; // default 30000
+  jitter?: boolean; // default true
+  retryNetworkErrors?: boolean; // default true
+}
+
+type RetryPolicy = Required<RetryOptions>;
+```
+
+| Condition               | Retried?                                |
+| ----------------------- | --------------------------------------- |
+| `429 Too Many Requests` | Yes                                     |
+| `5xx` except `501`      | Yes                                     |
+| `fetch` rejects         | Yes, unless `retryNetworkErrors: false` |
+| `4xx` other than `429`  | No                                      |
+| `501 Not Implemented`   | No                                      |
+
+**Method safety.** `GET` is always retryable. `POST` is not retried, because replaying it can duplicate a side effect — except `orders.create()` when `idempotencyKey` is set on the request.
+
+**Delay.** `initialDelayMs * 2 ** (attempt - 1)`, capped at `maxDelayMs`. With `jitter` on, the delay is drawn from the upper half of that window (`capped / 2 + random * capped / 2`), so it never collapses to zero.
+
+**`Retry-After`.** Honoured when present, in both the delta-seconds and HTTP-date forms, taking precedence over the computed delay. A value above `maxRetryAfterMs` aborts the retry and throws rather than stalling the request.
+
+Pass `retry: false` to disable retries entirely.
+
+---
+
 ## Error Handling
 
 ```ts
-import { ProdigiError, ProdigiApiError } from "prodigi-print-api";
+import {
+  ProdigiError,
+  ProdigiApiError,
+  ProdigiWebhookError,
+} from "prodigi-print-api";
 ```
 
 ### `ProdigiError`
@@ -231,11 +330,27 @@ class ProdigiApiError extends ProdigiError {
 }
 ```
 
-| Property      | Type             | Description                  |
-| ------------- | ---------------- | ---------------------------- |
-| `statusCode`  | `number`         | HTTP status code             |
-| `traceParent` | `string \| null` | Trace ID for Prodigi support |
-| `data`        | `unknown`        | Raw error response body      |
+| Property      | Type             | Description                                                         |
+| ------------- | ---------------- | ------------------------------------------------------------------- |
+| `statusCode`  | `number`         | HTTP status code                                                    |
+| `traceParent` | `string \| null` | Trace ID for Prodigi support                                        |
+| `data`        | `unknown`        | Parsed JSON error body, or the raw string when the body is not JSON |
+
+### `ProdigiWebhookError`
+
+Thrown by [`parseCallbackEvent`](#webhooks) when a callback payload is not valid.
+
+```ts
+class ProdigiWebhookError extends ProdigiError {
+  readonly payload: unknown;
+}
+```
+
+| Property  | Type      | Description                       |
+| --------- | --------- | --------------------------------- |
+| `payload` | `unknown` | The rejected payload, for logging |
+
+Network failures are rethrown unchanged (a `TypeError` from `fetch`) once retries are exhausted.
 
 ---
 
@@ -448,23 +563,36 @@ interface Order {
   packingSlip?: PackingSlip;
 }
 
-interface ListOrdersParams {
-  top?: number;
-  skip?: number;
-  status?: string;
-  orderIds?: string[];
-  merchantReferences?: string[];
-  createdFrom?: string;
-  createdTo?: string;
-}
-
 interface OrderOutcome {
   outcome: "Ok" | "Created" | "AlreadyExists" | "CreatedWithIssues" | "OnHold";
   order: Order;
   traceParent: string;
 }
 
+/**
+ * Status values accepted by the `status` filter on GET /orders.
+ * Deliberately distinct from OrderStage — camelCase, plus draft and
+ * awaitingPayment, which are not stage values.
+ */
+type OrderListStatus =
+  | "draft"
+  | "awaitingPayment"
+  | "inProgress"
+  | "complete"
+  | "cancelled";
+
+interface ListOrdersParams {
+  top?: number;
+  skip?: number;
+  createdFrom?: string | Date;
+  createdTo?: string | Date;
+  status?: OrderListStatus;
+  orderIds?: string[];
+  merchantReferences?: string[];
+}
+
 interface ListOrdersResponse {
+  outcome: string;
   orders: Order[];
   hasMore: boolean;
   nextUrl?: string;
@@ -559,19 +687,6 @@ interface Product {
 interface ProductOutcome {
   outcome: string;
   product: Product;
-  traceParent: string;
-}
-
-interface ListProductsParams {
-  sku?: string;
-  top?: number;
-  skip?: number;
-}
-
-interface ListProductsResponse {
-  products: Product[];
-  hasMore: boolean;
-  nextUrl?: string;
   traceParent: string;
 }
 
@@ -736,9 +851,15 @@ interface RecipientActionOutcome extends ActionOutcome {
 
 Types for handling [Prodigi webhook callbacks](https://www.prodigi.com/print-api/docs/reference/#callbacks) (CloudEvents v1.0).
 
-Set `callbackUrl` on an order to receive status change notifications.
+Set `callbackUrl` on an order to receive status change notifications. Use [`parseCallbackEvent`](#webhooks) to validate and narrow an incoming payload.
+
+#### Raw envelope
 
 ```ts
+interface CallbackEventData {
+  order: Order;
+}
+
 interface CallbackEvent {
   specversion: string;
   type: string;
@@ -747,17 +868,63 @@ interface CallbackEvent {
   time: string;
   datacontenttype: string;
   subject: string;
-  data: Order;
+  data: CallbackEventData;
 }
 ```
 
-| Field             | Example                                             | Description                  |
-| ----------------- | --------------------------------------------------- | ---------------------------- |
-| `specversion`     | `"1.0"`                                             | CloudEvents spec version     |
-| `type`            | `"com.prodigi.order.status.stage.changed#Complete"` | Event type with stage suffix |
-| `source`          | `"https://api.prodigi.com/v4.0"`                    | API endpoint URI             |
-| `id`              | `"evt_305174"`                                      | Unique event ID              |
-| `time`            | `"2024-01-15T10:30:00Z"`                            | RFC 3339 timestamp           |
-| `datacontenttype` | `"application/json"`                                | Always JSON                  |
-| `subject`         | `"ord_1234567"`                                     | Order ID                     |
-| `data`            |                                                     | Full `Order` object          |
+| Field             | Example                                             | Description                             |
+| ----------------- | --------------------------------------------------- | --------------------------------------- |
+| `specversion`     | `"1.0"`                                             | CloudEvents spec version                |
+| `type`            | `"com.prodigi.order.status.stage.changed#Complete"` | Event type with new value after `#`     |
+| `source`          | `"https://api.prodigi.com/v4.0/Orders/"`            | API endpoint URI                        |
+| `id`              | `"evt_305174"`                                      | Unique event ID, prefixed `evt_`        |
+| `time`            | `"2024-01-15T10:30:00Z"`                            | RFC 3339 timestamp                      |
+| `datacontenttype` | `"application/json"`                                | Always JSON                             |
+| `subject`         | `"ord_1234567"`                                     | Order ID                                |
+| `data`            | `{ order: { ... } }`                                | Wrapper object holding the full `Order` |
+
+> **Note:** `data` wraps the order as `{ order }` — it is not the `Order` itself.
+
+#### Parsed events
+
+```ts
+interface CallbackEventBase {
+  /** The raw envelope exactly as delivered. */
+  event: CallbackEvent;
+  id: string;
+  /** Order ID (CloudEvents `subject`). */
+  subject: string;
+  time: string;
+  order: Order;
+  /** CloudEvents `type` with the `#fragment` stripped. */
+  eventType: string;
+  /** Value after `#`, e.g. "InProgress". Empty string when absent. */
+  changedTo: string;
+}
+
+interface OrderStageChangedEvent extends CallbackEventBase {
+  kind: "order.status.stage.changed";
+}
+
+interface OrderShipmentEvent extends CallbackEventBase {
+  kind: "order.shipments.shipment";
+}
+
+interface UnknownCallbackEvent extends CallbackEventBase {
+  kind: "unknown";
+}
+
+type ProdigiCallbackEvent =
+  | OrderStageChangedEvent
+  | OrderShipmentEvent
+  | UnknownCallbackEvent;
+```
+
+Prodigi documents the stage-change `type` verbatim but not the shipment one, so shipment classification matches on the `com.prodigi.order.shipments` prefix implied by their documented naming convention. Anything unmatched still parses, as `UnknownCallbackEvent` — so an unrecognised or newly added event never throws.
+
+Both constants are exported if you need to match on them yourself:
+
+```ts
+const ORDER_STAGE_CHANGED_TYPE = "com.prodigi.order.status.stage.changed";
+const ORDER_SHIPMENT_TYPE_PREFIX = "com.prodigi.order.shipments";
+```

@@ -164,3 +164,43 @@ export interface OrderOutcome {
   order: Order;
   traceParent: string;
 }
+
+/**
+ * Status values accepted by the `status` filter on `GET /orders`.
+ *
+ * Deliberately distinct from {@link OrderStage}: the filter is camelCase and
+ * adds `draft` and `awaitingPayment`, which are not stage values.
+ */
+export type OrderListStatus =
+  | "draft"
+  | "awaitingPayment"
+  | "inProgress"
+  | "complete"
+  | "cancelled";
+
+export interface ListOrdersParams {
+  /** Number of orders to return. Must be 1–100. Server default is 10. */
+  top?: number;
+  /** Number of records to skip before the next `top` orders. Must be >= 0. Server default is 0. */
+  skip?: number;
+  /** Limit to orders placed after this UTC date/time. A `Date` is serialized to ISO 8601. */
+  createdFrom?: string | Date;
+  /** Limit to orders placed before this UTC date/time. A `Date` is serialized to ISO 8601. */
+  createdTo?: string | Date;
+  /** Limit to a particular status. */
+  status?: OrderListStatus;
+  /** Limit to a list of Prodigi order IDs. */
+  orderIds?: string[];
+  /** Limit to a range of your own order references. */
+  merchantReferences?: string[];
+}
+
+export interface ListOrdersResponse {
+  outcome: string;
+  orders: Order[];
+  /** True when more orders match the filter than were returned in this page. */
+  hasMore: boolean;
+  /** Absolute URL of the next page, present only when `hasMore` is true. */
+  nextUrl?: string;
+  traceParent: string;
+}

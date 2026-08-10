@@ -7,6 +7,8 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    ignores: ["dist/"],
+    // `**/` so the explorer's local build output is ignored too. CI never sees
+    // it (fresh checkout, gitignored), so without this local lint diverges.
+    ignores: ["**/dist/"],
   },
 );

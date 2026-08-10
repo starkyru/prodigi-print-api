@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ProdigiClient } from "../../src/client.js";
 
+/** Stable reference so the merchantReferences filter has something to match. */
+const MERCHANT_REFERENCE = "prodigi-sdk-e2e";
+
 describe("Orders E2E", () => {
   let client: ProdigiClient;
   let orderId: string;
@@ -13,6 +16,7 @@ describe("Orders E2E", () => {
 
   it("creates an order", async () => {
     const result = await client.orders.create({
+      merchantReference: MERCHANT_REFERENCE,
       shippingMethod: "Budget",
       recipient: {
         name: "E2E Test",
@@ -51,6 +55,51 @@ describe("Orders E2E", () => {
     expect(result.outcome).toBe("Ok");
     expect(result.order.id).toBe(orderId);
     expect(result.order.recipient.name).toBe("E2E Test");
+  });
+
+  it("lists orders with the documented pagination shape", async () => {
+    const result = await client.orders.list({ top: 2 });
+
+    expect(result.outcome).toBe("Ok");
+    expect(Array.isArray(result.orders)).toBe(true);
+    expect(result.orders.length).toBeLessThanOrEqual(2);
+    expect(typeof result.hasMore).toBe("boolean");
+    if (result.hasMore) {
+      expect(result.nextUrl).toBeTypeOf("string");
+    }
+  });
+
+  it("filters by orderIds", async () => {
+    const result = await client.orders.list({ orderIds: [orderId] });
+
+    expect(result.orders.map((order) => order.id)).toContain(orderId);
+  });
+
+  it("filters by merchantReferences", async () => {
+    const result = await client.orders.list({
+      merchantReferences: [MERCHANT_REFERENCE],
+      top: 5,
+    });
+
+    expect(result.orders.length).toBeGreaterThan(0);
+    // A silently-ignored filter would return unrelated orders.
+    for (const order of result.orders) {
+      expect(order.merchantReference).toBe(MERCHANT_REFERENCE);
+    }
+  });
+
+  it("filters by createdFrom", async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await client.orders.list({
+      createdFrom: yesterday,
+      top: 5,
+    });
+
+    for (const order of result.orders) {
+      expect(Date.parse(order.created)).toBeGreaterThanOrEqual(
+        yesterday.getTime(),
+      );
+    }
   });
 
   it("gets available actions", async () => {

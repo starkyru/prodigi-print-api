@@ -2,6 +2,8 @@ import type { HttpClient } from "../http.js";
 import type {
   ActionOutcome,
   CreateOrderRequest,
+  ListOrdersParams,
+  ListOrdersResponse,
   OrderActions,
   OrderOutcome,
   RecipientActionOutcome,
@@ -11,17 +13,29 @@ import type {
   UpdateShippingMethodRequest,
 } from "../types/index.js";
 
+/** Serialize a date filter, leaving caller-supplied strings untouched. */
+function toIsoDate(value: string | Date | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return value instanceof Date ? value.toISOString() : value;
+}
+
 /** Resource for managing Prodigi print orders. */
 export class OrdersResource {
   constructor(private readonly http: HttpClient) {}
 
   /**
    * Submit a new order.
+   *
+   * Retried on transient failures only when `request.idempotencyKey` is set —
+   * without one, replaying the POST could create a duplicate order.
+   *
    * @param request - Order creation payload.
    * @returns The created order outcome.
    */
   async create(request: CreateOrderRequest): Promise<OrderOutcome> {
-    return this.http.post<OrderOutcome>("/orders", request);
+    return this.http.post<OrderOutcome>("/orders", request, {
+      idempotent: request.idempotencyKey !== undefined,
+    });
   }
 
   /**
@@ -30,6 +44,26 @@ export class OrdersResource {
    */
   async get(orderId: string): Promise<OrderOutcome> {
     return this.http.get<OrderOutcome>(`/orders/${orderId}`);
+  }
+
+  /**
+   * List orders with optional filtering and pagination.
+   *
+   * Paginate with `top`/`skip`; `hasMore` on the response indicates whether
+   * further pages exist.
+   *
+   * @param params - Optional filters. Omitted filters are not sent.
+   */
+  async list(params?: ListOrdersParams): Promise<ListOrdersResponse> {
+    return this.http.get<ListOrdersResponse>("/orders", {
+      top: params?.top,
+      skip: params?.skip,
+      createdFrom: toIsoDate(params?.createdFrom),
+      createdTo: toIsoDate(params?.createdTo),
+      status: params?.status,
+      orderIds: params?.orderIds,
+      merchantReferences: params?.merchantReferences,
+    });
   }
 
   /**

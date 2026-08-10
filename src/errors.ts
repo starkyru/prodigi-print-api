@@ -31,3 +31,19 @@ export class ProdigiApiError extends ProdigiError {
     this.data = data;
   }
 }
+
+/** Error thrown when an incoming callback payload is not a valid Prodigi event. */
+export class ProdigiWebhookError extends ProdigiError {
+  /** The payload that failed validation, as received. */
+  readonly payload: unknown;
+
+  /**
+   * @param message - Why the payload was rejected.
+   * @param payload - The rejected payload, for logging.
+   */
+  constructor(message: string, payload: unknown) {
+    super(message);
+    this.name = "ProdigiWebhookError";
+    this.payload = payload;
+  }
+}
